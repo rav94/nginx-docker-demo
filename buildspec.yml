@@ -1,0 +1,19 @@
+version: 0.2
+
+phases:
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      - docker build -t $IMAGE_REPO_URL:$IMAGE_TAG .
+      - echo Testing NGINX configuration...
+      - sh test.sh $IMAGE_REPO_URL:$IMAGE_TAG
+  post_build:
+    commands:
+      - bash -c "if [ /"$CODEBUILD_BUILD_SUCCEEDING/" == /"0/" ]; then exit 1; fi" # Check if CoeBuild Build phase is a sucess, if not fail and exit
+      - echo Build completed on `date`
+      - echo Pushing the Docker image...
+      - mvn clean install -P $NGINX_IMAGE_RELEASE_PROFILE
+      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $IMAGE_REPO_URL:$IMAGE_TAG > imagedefinitions.json
+artifacts:
+  files: imagedefinitions.json
